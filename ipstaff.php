@@ -1,5 +1,4 @@
 <?php
-//namespace ipstaff; 最後にディレクトリをわけ、ファイルもわける。
 
 class CoreException extends Exception
 {
