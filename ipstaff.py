@@ -308,6 +308,7 @@ class rir(ip):
             result = None
         else:
             rnum = len(result)
+            # column数は一定
             cnum = len(result[0])
             if cnum == 1 and rnum > 1:
                 result = [e[0] for e in result]
