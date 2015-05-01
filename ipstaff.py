@@ -121,9 +121,17 @@ class ip():
     def getcidrsbyiprange(self, sip, eip):
         cidrlist = None
         if self.is_ipv4(sip) and self.is_ipv4(eip):
-            cidrlist = self._tocidrv4(self.ipv4ton(sip), self.ipv4ton(eip) - self.ipv4ton(sip) +1)
+            minIP = self.ipv4ton(sip)
+            maxIP = self.ipv4ton(eip)
+            if minIP > maxIP:
+                raise CoreException('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
+            cidrlist = self._tocidrv4(minIP, maxIP - minIP +1)
         elif self.is_ipv6(sip) and self.is_ipv6(eip):
-            cidrlist = self._tocidrv6(self.ipv6ton(sip), self.ipv6ton(eip) - self.ipv6ton(sip) +1)
+            minIP = self.ipv6ton(sip)
+            maxIP = self.ipv6ton(eip)
+            if minIP > maxIP:
+                raise CoreException('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
+            cidrlist = self._tocidrv6(minIP, maxIP - minIP +1)
         else: 
             raise CoreException('{0} or {1} is not IPRange.'.format(sip, eip))
         return cidrlist
@@ -163,7 +171,7 @@ class rir(ip):
         if os.path.exists(dbpath):
             self.__c = sqlite3.connect(dbpath).cursor()
 
-    def set_db(self, dbpath):
+    def setdb(self, dbpath):
         if os.path.exists(dbpath):
             self.__c = sqlite3.connect(dbpath).cursor()
         else:

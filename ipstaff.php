@@ -1,4 +1,5 @@
 <?php
+//namespace ipstaff; 最後にディレクトリをわけ、ファイルもわける。
 
 class CoreException extends Exception
 {
@@ -173,11 +174,21 @@ class IP
     {
         $cidrlist = null;
         if ($this->is_ipv4($sip) && $this->is_ipv4($eip)) {
-            $cidrlist = $this->tocidrv4($this->ipv4ton($sip), $this->ipv4ton($eip) - $this->ipv4ton($sip) + 1);
+            $minIP = $this->ipv4ton($sip);
+            $maxIP = $this->ipv4ton($eip);
+            if ($minIP > $maxIP) {
+                throw new CoreException(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip));
+            }
+            $cidrlist = $this->tocidrv4($minIP, $maxIP - $minIP + 1);
         } elseif ($this->is_ipv6($sip) && $this->is_ipv6($eip)) {
+            $minIP = $this->ipv6ton($sip);
+            $maxIP = $this->ipv6ton($eip);
+            if ($minIP > $maxIP) {
+                throw new CoreException(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip));
+            }
             $cidrlist = $this->tocidrv6(
-                $this->ipv6ton($sip), 
-                gmp_strval(gmp_add(gmp_sub(gmp_init($this->ipv6ton($eip)), gmp_init($this->ipv6ton($sip))), 1))
+                $minIP, 
+                gmp_strval(gmp_add(gmp_sub(gmp_init($maxIP), gmp_init($minIP)), 1))
             );
         } else {
             throw new CoreException(sprintf("%s or %s is not IPRange.", $sip, $eip));
