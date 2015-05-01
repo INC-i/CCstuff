@@ -1,0 +1,13 @@
+#!/usr/bin/python
+# -*- coding:utf-8 -*-
+
+import sys
+import ipstaff
+
+if __name__ == '__main__':
+    argv = sys.argv
+    ir = ipstaff.rir()
+    if len(argv) == 1:
+        ir.create_db()
+    else:
+        ir.create_db(argv[1])
