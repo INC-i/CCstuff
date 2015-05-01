@@ -163,7 +163,7 @@ class rir(ip):
         if os.path.exists(dbpath):
             self.__c = sqlite3.connect(dbpath).cursor()
 
-    def setdb(self, dbpath):
+    def set_db(self, dbpath):
         if os.path.exists(dbpath):
             self.__c = sqlite3.connect(dbpath).cursor()
         else:
