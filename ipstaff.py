@@ -301,7 +301,7 @@ class rir(ip):
             raise CoreException('DB connection is not found.')
         elif not name in rir.__select_sql.keys():
             raise CoreException('\'{0}\' identifier is not defined in the file({1}/select.sql).'.format(name, self.__sqldir))
-
+        
         self.__c.execute(rir.__select_sql[name].format(arg1, arg2))
         result = self.__c.fetchall()
         if result == []:
@@ -310,7 +310,7 @@ class rir(ip):
             rnum = len(result)
             cnum = len(result[0])
             if cnum == 1 and rnum > 1:
-                result = [e for e in result[0]]
+                result = [e[0] for e in result]
             elif cnum == 1 and rnum == 1:
                 result = result[0][0]
                 if type(result) is type(str()):
