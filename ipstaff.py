@@ -349,7 +349,7 @@ class rir(ip):
         elif self.is_asn(arg):
             return self.__getdata('asn_to_all', arg)
         else:
-            raise CoreException('{0} is not both IPv4,6 Address and ASN.'.format(asn))
+            raise CoreException('{0} is not both IPv4,6 Address and ASN.'.format(arg))
     
     def ipv4tocc(self, addr):
         return self.__getdata('ipv4_to_cc', self.ipv4ton(addr))
