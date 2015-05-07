@@ -9,39 +9,47 @@ ir = ipstaff.rir()
 jpflag = 0
 
 def stdin_replace():
-    cache = {}
-    cache['ip'] = {}
-    cache['name'] = {}
-    ipv4_rexp = re.compile('\d{0,3}\.\d{0,3}\.\d{0,3}\.\d{0,3}')
-    for row in sys.stdin.readlines():
-        row = row.rstrip()
-        m = ipv4_rexp.findall(row)
-        if m == []:
+    try:
+        cache = {}
+        cache['ip'] = {}
+        cache['name'] = {}
+        ipv4_rexp = re.compile('\d{0,3}\.\d{0,3}\.\d{0,3}\.\d{0,3}')
+        for row in sys.stdin.readlines():
+            row = row.rstrip()
+            m = ipv4_rexp.findall(row)
+            if m == []:
+                print row
+                continue
+            for ip in m:
+                if not ir.is_ipv4(ip):
+                    continue
+                if not ip in cache['ip'].keys():
+                    cc = ir.ipv4tocc(ip)
+                    cn = None
+                    if not cc is None:
+                        if not cc in cache['name'].keys():
+                            cn = ir.cctoname(cc)[jpflag].encode('utf-8')
+                            cache['name'][cc] = cn
+                        else:
+                            cn = cache['name'][cc]
+                    cache['ip'][ip] = '{0}({1}:{2})'.format(ip, cc, cn)
+                row = re.sub('(?<!\d)%s(?!\d)' % ip, cache['ip'][ip], row)
             print row
-            continue
-        for ip in m:
-            if not ip in cache['ip'].keys():
-                cc = ir.ipv4tocc(ip)
-                cn = None
-                if not cc is None:
-                    if not cc in cache['name'].keys():
-                        cn = ir.cctoname(cc)[jpflag].encode('utf-8')
-                        cache['name'][cc] = cn
-                    else:
-                        cn = cache['name'][cc]
-                cache['ip'][ip] = '{0}({1}:{2})'.format(ip, cc, cn)
-            row = re.sub('(?<!\d)%s(?!\d)' % ip, cache['ip'][ip], row)
-        print row
+    except KeyboardInterrupt, IOError:
+        sys.exit()
 
 def resout(ip):
-    if not ir.is_ipv4(ip):
-        print '%s is not ipv4 address.' % ip
+    try:
+        if not ir.is_ipv4(ip):
+            print '%s is not ipv4 address.' % ip
+            sys.exit()
+        cc = str(ir.ipv4tocc(ip))
+        cn = None
+        if not cc is None:
+            cn = ir.cctoname(cc)[jpflag]
+        print 'IP: %s\nCountryCode: %s\nCountry: %s' % (ip, cc, cn)
+    except KeyboardInterrupt, IOError:
         sys.exit()
-    cc = str(ir.ipv4tocc(ip))
-    cn = None
-    if not cc is None:
-        cn = ir.cctoname(cc)[jpflag]
-    print 'IP: %s\nCountryCode: %s\nCountry: %s' % (ip, cc, cn)
 
 if __name__ == '__main__':
     try:
@@ -60,8 +68,10 @@ if __name__ == '__main__':
                 jpflag = 1
                 resout(argv[2])
             else:
-                raise Exception('invalid argument : %s' % arg1)
+                print 'invalid argument : %s' % argv[1]
+                sys.exit()
         else:
-            raise Exception('invalid argument count.')
+            print 'invalid argument count.'
+            sys.exit()
     except KeyboardInterrupt, IOError:
         sys.exit()
