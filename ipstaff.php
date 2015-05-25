@@ -20,11 +20,13 @@ class CoreException extends Exception
 class IP
 {
 
+    protected static $V4MAX = 4294967295;
+    protected static $V6MAX = "340282366920938463463374607431768211455";
     protected static $REGEX = array();
 
     public function __construct()
     {
-
+        
         $SEG4 = "(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";
         $SEG6 = "[0-9a-fA-F]{1,4}";
         self::$REGEX['ipv4'] = "/^(($SEG4\.){3}$SEG4)$/";
@@ -60,6 +62,36 @@ class IP
             return True;
         } else {
             return False;
+        }
+    }
+
+    public function is_cidr($cidr)
+    {
+        if (strpos($cidr, "/") === false) {
+            return False;
+        }
+
+        list($ip, $mask) = explode("/", $cidr);
+        if ($this->is_ipv4($ip) && preg_match("/^\d+$/", $mask)) {
+            $min = $this->ipv4ton($ip);
+            if ($mask < 0 || $mask > 32) {
+                return False;
+            }
+            $max = $min + pow(2, 32-$mask) -1;
+            if ($max > self::$V4MAX) {
+                return False;
+            }
+            return True;
+        } else if ($this->is_ipv6($ip) && preg_match("/^\d+$/", $mask)) {
+            $min = gmp_init($this->ipv6ton($ip));
+            if ($mask < 0 || $mask > 128) {
+                return False;
+            }
+            $max = gmp_sub(gmp_add($min, gmp_pow(2, 128-$mask)), 1);
+            if (gmp_cmp($max, self::$V6MAX) > 0) {
+                return False;
+            }
+            return True;
         }
     }
     
@@ -147,24 +179,75 @@ class IP
         }
         return implode(':', $ary);
     }
-    
+
+
+    public function contain($cidr, $ip)
+    {
+        if (strpos($cidr, "/") === false) {
+            throw new CoreException("$cidr is not IP/CIDR.");
+        }
+        
+        list($sip, $mask) = explode("/", $cidr);
+        if ($this->is_ipv4($sip) && preg_match("/^\d+$/", $mask)) {
+            if (!$this->is_ipv4($ip)) {
+                throw new CoreException("$ip is not ipv4 address.");
+            }
+            $min = $this->ipv4ton($sip);
+            if (0 <= $mask && $mask <= 32) {
+                $max = $min + pow(2, 32 - $mask) - 1;
+            } else {
+                throw new CoreException("/$mask is not cidr.");
+            }
+            if ($max <= self::$V4MAX) {
+                $tval = $this->ipv4ton($ip);
+                if ($min <= $tval && $tval <= $max) {
+                    return True;
+                } else {
+                    return False;
+                }
+            } else {
+                throw new CoreException("$cidr is invalid ip range.");
+            }
+        } else if ($this->is_ipv6($sip) && preg_match("/^\d+$/", $mask)) {
+            if (!$this->is_ipv6($ip)) {
+                throw new CoreException("$ip is not ipv6 address.");
+            }
+            $min = $this->ipv6ton($sip);
+            if (0 <= $mask && $mask <= 128) {
+                $max = gmp_sub(gmp_add($min, gmp_pow(2, 128 - $mask)), 1);
+            } else {
+                throw new CoreException("/$mask is not cidr.");
+            }
+            if (gmp_cmp($max, self::$V6MAX) <= 0 ) {
+                $tval = $this->ipv6ton($ip);
+                if (gmp_cmp($min, $tval) <= 0 && gmp_cmp($tval, $max) <= 0) {
+                    return True;
+                } else {
+                    return False;
+                }
+            } else {
+                throw new CoreException("$cidr is invalid ip range.");
+            }
+        } else {
+            throw new CoreException("$sip/$mask is not IP/CIDR.");
+        }
+    }
+
     public function getiprangebycidr($cidr)
     {
-        if (!preg_match('/^.*\/[0-9]+$/', $cidr)) {
+        if (!$this->is_cidr($cidr)) {
             throw new CoreException(sprintf("%s is not cidr.", $cidr));
         }
         list($sip, $mask) = explode('/', $cidr);
         $ips = array();
-        if ($this->is_ipv4($sip) && $mask >=0 && $mask <=32) {
-            $max = pow(2, 32-$mask)-1;
-            $ips[0] = $this->ntoipv4($this->ipv4ton($sip));
-            $ips[1] = $this->ntoipv4($this->ipv4ton($sip) + $max);
-        } elseif ($this->is_ipv6($sip) && $mask >=0 && $mask <=128) {
-            $max = gmp_sub(gmp_pow(2, 128-$mask), 1);
-            $ips[0] = $this->ntoipv6(gmp_strval(gmp_add(gmp_init($this->ipv6ton($sip)), 0)));
-            $ips[1] = $this->ntoipv6(gmp_strval(gmp_add(gmp_init($this->ipv6ton($sip)), $max)));
-        } else {
-            throw new CoreException(sprintf("%s is not cidr.", $cidr));
+        if ($this->is_ipv4($sip)) {
+            $min = $this->ipv4ton($sip);
+            $ips[0] = $this->ntoipv4($min);
+            $ips[1] = $this->ntoipv4($min + pow(2, 32-$mask)-1);
+        } elseif ($this->is_ipv6($sip)) {
+            $min = $this->ipv6ton($sip);
+            $ips[0] = $this->ntoipv6($min);
+            $ips[1] = $this->ntoipv6(gmp_strval(gmp_sub(gmp_add($min, gmp_pow(2, 128-$mask)), 1)));
         }
         return $ips;
     }
@@ -232,8 +315,8 @@ class IP
 class RIR extends IP
 {
     private static $_SELECTSQL = null;
-    private static $_DEFAULTDBNAME = "rirdb";
-    private static $_SQLDIR = './sql';
+    private static $_DEFAULTDBNAME = "/rirdb";
+    private static $_SQLDIR = '/sql';
     private $_v6list = null;
     private $_c = null;
 
@@ -242,7 +325,7 @@ class RIR extends IP
         parent::__construct();
         self::$REGEX['cc'] = "/^[a-zA-Z]{2}$/"; 
         if (is_null($dbpath)) {
-            $dbpath = self::$_DEFAULTDBNAME;
+            $dbpath = dirname(__FILE__) . self::$_DEFAULTDBNAME;
         }
         if (file_exists($dbpath)) {
             $this->_c = new SQLite3($dbpath);
@@ -281,12 +364,12 @@ class RIR extends IP
     private function _getdata($name, $arg1 = null, $arg2 = null)
     {
         if (is_null(self::$_SELECTSQL)) {
-            self::$_SELECTSQL = $this->_sqlreader(self::$_SQLDIR . '/select.sql');
+            self::$_SELECTSQL = $this->_sqlreader(dirname(__FILE__) . self::$_SQLDIR . '/select.sql');
         }
         if (is_null($this->_c)) {
             throw new CoreException("DB connection is not found.");
         } else if (!array_key_exists($name, self::$_SELECTSQL)) {
-            throw new CoreException(sprintf("\'%s\' identifier is not defined in the file(%s/select.sql).", $name, self::$_SQLDIR));
+            throw new CoreException(sprintf("\'%s\' identifier is not defined in the file(%s/select.sql).", $name, dirname(__FILE__) . self::$_SQLDIR));
         }
         $query = preg_replace('/\{1\}/', $arg2, preg_replace('/\{0\}/', $arg1, self::$_SELECTSQL[$name]));
         $result = $this->_c->query($query);
