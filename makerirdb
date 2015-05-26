@@ -6,8 +6,8 @@ import ccstuff
 
 if __name__ == '__main__':
     argv = sys.argv
-    ir = ccstuff.rir()
+    i = ccstuff.rir()
     if len(argv) == 1:
-        ir.create_db()
+        i.create_db()
     else:
-        ir.create_db(argv[1])
+        i.create_db(argv[1])
