@@ -1,22 +1,5 @@
 <?php
 
-class CoreException extends Exception
-{
-
-    private $_errmsg = null;
-
-    public function __construct($errmsg)
-    {
-        parent::__construct();
-        $this->_errmsg = $errmsg;
-    }
-
-    public function __toString()
-    {
-        return $this->_errmsg;
-    }
-}
-
 class IP
 {
 
@@ -98,7 +81,7 @@ class IP
     public function ipv4ton($addr)
     {
         if (!$this->is_ipv4($addr)) {
-            throw new CoreException(sprintf("%s is not IPv4 Address.", $addr));
+            trigger_error(sprintf("%s is not IPv4 Address.", $addr), E_USER_NOTICE);
         }
         $nip = 0;
         foreach (explode(".", $addr) as $k => $e) {
@@ -128,7 +111,7 @@ class IP
     public function fullformedipv6($addr)
     {
         if (!$this->is_ipv6($addr)) {
-            throw new CoreException(sprintf("%s is not IPv6 Address.", $addr));
+            trigger_error(sprintf("%s is not IPv6 Address.", $addr), E_USER_NOTICE);
         }
         $parts = explode('::', $addr);
         if (count($parts) == 2) {
@@ -155,7 +138,7 @@ class IP
     public function ntoipv4($n)
     {
         if (!is_int($n)) {
-            throw new CoreException(sprintf("%s is not integer.", $n));
+            trigger_error(sprintf("%s is not integer.", $n), E_USER_NOTICE);
         }
         $ary = array();
         for ($i=1;$i<5;$i++) {
@@ -168,9 +151,9 @@ class IP
     {
         //引数はstr型、intやlongだと指数表示されてしまう場合があるため
         if (!is_string($n)) {
-            throw new CoreException(sprintf("%s is not string type.", (string)$n));
+            trigger_error(sprintf("%s is not string type.", (string)$n), E_USER_NOTICE);
         } elseif (!preg_match('/^\d+$/', $n)) {
-            throw new CoreException(sprintf("%s is not integer.", (string)$n));
+            trigger_error(sprintf("%s is not integer.", (string)$n), E_USER_NOTICE);
         }
         $ary = array();
         for ($i=1;$i<9;$i++) {
@@ -184,19 +167,19 @@ class IP
     public function contain($cidr, $ip)
     {
         if (strpos($cidr, "/") === false) {
-            throw new CoreException("$cidr is not IP/CIDR.");
+            trigger_error("$cidr is not IP/CIDR.", E_USER_NOTICE);
         }
         
         list($sip, $mask) = explode("/", $cidr);
         if ($this->is_ipv4($sip) && preg_match("/^\d+$/", $mask)) {
             if (!$this->is_ipv4($ip)) {
-                throw new CoreException("$ip is not ipv4 address.");
+                trigger_error("$ip is not ipv4 address.", E_USER_NOTICE);
             }
             $min = $this->ipv4ton($sip);
             if (0 <= $mask && $mask <= 32) {
                 $max = $min + pow(2, 32 - $mask) - 1;
             } else {
-                throw new CoreException("/$mask is not cidr.");
+                trigger_error("/$mask is not cidr.", E_USER_NOTICE);
             }
             if ($max <= self::$V4MAX) {
                 $tval = $this->ipv4ton($ip);
@@ -206,17 +189,17 @@ class IP
                     return False;
                 }
             } else {
-                throw new CoreException("$cidr is invalid ip range.");
+                trigger_error("$cidr is invalid ip range.", E_USER_NOTICE);
             }
         } else if ($this->is_ipv6($sip) && preg_match("/^\d+$/", $mask)) {
             if (!$this->is_ipv6($ip)) {
-                throw new CoreException("$ip is not ipv6 address.");
+                trigger_error("$ip is not ipv6 address.", E_USER_NOTICE);
             }
             $min = $this->ipv6ton($sip);
             if (0 <= $mask && $mask <= 128) {
                 $max = gmp_sub(gmp_add($min, gmp_pow(2, 128 - $mask)), 1);
             } else {
-                throw new CoreException("/$mask is not cidr.");
+                trigger_error("/$mask is not cidr.", E_USER_NOTICE);
             }
             if (gmp_cmp($max, self::$V6MAX) <= 0 ) {
                 $tval = $this->ipv6ton($ip);
@@ -226,17 +209,17 @@ class IP
                     return False;
                 }
             } else {
-                throw new CoreException("$cidr is invalid ip range.");
+                trigger_error("$cidr is invalid ip range.", E_USER_NOTICE);
             }
         } else {
-            throw new CoreException("$sip/$mask is not IP/CIDR.");
+            trigger_error("$sip/$mask is not IP/CIDR.", E_USER_NOTICE);
         }
     }
 
     public function getiprangebycidr($cidr)
     {
         if (!$this->is_cidr($cidr)) {
-            throw new CoreException(sprintf("%s is not cidr.", $cidr));
+            trigger_error(sprintf("%s is not cidr.", $cidr), E_USER_NOTICE);
         }
         list($sip, $mask) = explode('/', $cidr);
         $ips = array();
@@ -259,21 +242,21 @@ class IP
             $minIP = $this->ipv4ton($sip);
             $maxIP = $this->ipv4ton($eip);
             if ($minIP > $maxIP) {
-                throw new CoreException(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip));
+                trigger_error(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip), E_USER_NOTICE);
             }
             $cidrlist = $this->tocidrv4($minIP, $maxIP - $minIP + 1);
         } elseif ($this->is_ipv6($sip) && $this->is_ipv6($eip)) {
             $minIP = $this->ipv6ton($sip);
             $maxIP = $this->ipv6ton($eip);
             if ($minIP > $maxIP) {
-                throw new CoreException(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip));
+                trigger_error(sprintf("Minimum IP(%s) is larger than Maximum IP(%s).", $sip, $eip), E_USER_NOTICE);
             }
             $cidrlist = $this->tocidrv6(
                 $minIP, 
                 gmp_strval(gmp_add(gmp_sub(gmp_init($maxIP), gmp_init($minIP)), 1))
             );
         } else {
-            throw new CoreException(sprintf("%s or %s is not IPRange.", $sip, $eip));
+            trigger_error(sprint("%s or %s is not IPRange.", $sip, $eip), E_USER_NOTICE);
         }
         return $cidrlist;
     }
@@ -330,7 +313,7 @@ class RIR extends IP
         if (file_exists($dbpath)) {
             $this->_c = new SQLite3($dbpath);
         } else {
-            throw new CoreException(sprintf('DB(%s) is not found.', $dbpath));
+            trigger_error(sprintf('DB(%s) is not found.', $dbpath), E_USER_ERROR);
         }
     }
 
@@ -357,7 +340,7 @@ class RIR extends IP
             $sqllist[$key] = preg_replace("/^\s*/", '', preg_replace("/\s{2,}/", ' ', $buf));
             return $sqllist;
         } else {
-            throw new CoreException(sprintf("%s is not found.", $fpath));
+            trigger_error(sprintf("%s is not found.", $fpath), E_USER_ERROR);
         }
     }
 
@@ -367,9 +350,10 @@ class RIR extends IP
             self::$_SELECTSQL = $this->_sqlreader(dirname(__FILE__) . self::$_SQLDIR . '/select.sql');
         }
         if (is_null($this->_c)) {
-            throw new CoreException("DB connection is not found.");
+            trigger_error("DB connection is not found.", E_USER_ERROR);
         } else if (!array_key_exists($name, self::$_SELECTSQL)) {
-            throw new CoreException(sprintf("\'%s\' identifier is not defined in the file(%s/select.sql).", $name, dirname(__FILE__) . self::$_SQLDIR));
+            trigger_error(sprintf("\'%s\' identifier is not defined in the file(%s/select.sql).", 
+                          $name, dirname(__FILE__) . self::$_SQLDIR), E_USER_ERROR);
         }
         $query = preg_replace('/\{1\}/', $arg2, preg_replace('/\{0\}/', $arg1, self::$_SELECTSQL[$name]));
         $result = $this->_c->query($query);
@@ -421,7 +405,7 @@ class RIR extends IP
          } else if ($this->is_asn($arg)) {
             return $this->_getdata('asn_to_all', $arg);
          } else {
-            throw new CoreException(sprintf("%s is not both IPv4,6 Address and ASN.", $arg));
+            trigger_error(sprintf("%s is not both IPv4,6 Address and ASN.", $arg), E_USER_NOTICE);
          }
     }
 
@@ -440,9 +424,9 @@ class RIR extends IP
     {
         $res = False;
         if (!is_string($val)) {
-            throw new CoreException(sprintf("%s is not string type.", (string)$n));
+            trigger_error(sprintf("%s is not string type.", (string)$n), E_USER_NOTICE);
         } elseif (!preg_match('/^\d+$/', $val)) {
-            throw new CoreException(sprintf("%s is not integer.", (string)$n));
+            trigger_error(sprintf("%s is not integer.", (string)$n), E_USER_NOTICE);
         }
         $val = gmp_init($val);
         if ($this->_v6list == null) {
@@ -468,7 +452,7 @@ class RIR extends IP
     public function asntocc($asn)
     {
         if (!$this->is_asn($asn)) {
-            throw new CoreException(sprintf("%s is not ASN.", $asn));
+            trigger_error(sprintf("%s is not ASN.", $asn), E_USER_NOTICE);
         }
         return $this->_getdata('asn_to_cc', $asn);
     }
@@ -476,7 +460,7 @@ class RIR extends IP
     public function cctoasns($cc)
     {
         if (!$this->is_cc($cc)) {
-            throw new CoreException(sprintf("%s is not country code.", $cc));
+            trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         return $this->_getdata('cc_to_asns', $cc);
     }
@@ -485,7 +469,7 @@ class RIR extends IP
     {
         $cidrlist = array();
         if (!$this->is_cc($cc)) {
-            throw new CoreException(sprintf("%s is not country code.", $cc));
+            trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         foreach ($this->_getdata('cc_to_ipv4s', $cc) as $e) {
             $cidrlist[count($cidrlist)] = $this->tocidrv4((int)$e[0], (int)($e[1] - $e[0] + 1));
@@ -497,7 +481,7 @@ class RIR extends IP
     {
         $cidrlist = array();
         if (!$this->is_cc($cc)) {
-            throw new CoreException(sprintf("%s is not country code.", $cc));
+            trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         foreach ($this->_getdata('cc_to_ipv6s', $cc) as $e) {
             $cidrlist[count($cidrlist)] = $this->tocidrv6($e[0], gmp_strval(gmp_add(gmp_sub($e[1], $e[0]), "1")));
@@ -508,7 +492,7 @@ class RIR extends IP
     public function cctoname($cc)
     {
         if (!$this->is_cc($cc)) {
-            throw new CoreException(sprintf("%s is not country code.", $cc));
+            trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         return $this->_getdata('cc_to_name', $cc);
     }
@@ -516,7 +500,7 @@ class RIR extends IP
     public function nametocc($name)
     {
         if (!preg_match('/[A-Za-z]*/', $name)) {
-            throw new CoreException(sprintf("%s is not English name.", $name));
+            trigger_error(sprintf("%s is not English name.", $name), E_USER_NOTICE);
         }
         return $this->_getdata('name_to_cc', $name);
     }

@@ -6,16 +6,6 @@ import math
 import sqlite3
 import os
 
-class CoreException(Exception):
-
-    def __init__(self, errstr):
-        Exception.__init__(self)
-        self.errstr = errstr
-
-    def __str__(self):
-        return self.errstr
-
-
 class ip():
 
     v4max = 4294967295
@@ -87,34 +77,34 @@ class ip():
 
     def contain(self, cidr, ip):
         if not "/" in cidr:
-            raise CoreException("%s is not cidr." % cidr)
+            raise ValueError("%s is not cidr." % cidr)
 
         sip, mask = cidr.split("/")
         
         if not self.is_int(mask):
-           raise CoreException("%s is not cidr." % cidr)
+           raise ValueError("%s is not cidr." % cidr)
 
         mask = int(mask)
         min, max, tval = 0, 0, 0
 
         if self.is_ipv4(sip) and mask >= 0 and mask <= 32:
             if not self.is_ipv4(ip):
-                raise CoreException("%s is not ipv4 address." % ip)
+                raise ValueError("%s is not ipv4 address." % ip)
             min = self.ipv4ton(sip)
             max = min + 2 ** (32 - mask) - 1
             if max > self.v4max:
-                raise CoreException("%s is not cidr." % cidr)
+                raise ValueError("%s is not cidr." % cidr)
             tval = self.ipv4ton(ip)
         elif self.is_ipv6(sip) and mask >= 0 and mask <= 128:
             if not self.is_ipv6(ip):
-                raise CoreException("%s is not ipv6 address." % ip)
+                raise ValueError("%s is not ipv6 address." % ip)
             min = self.ipv6ton(sip)
             max = min + 2 ** (128 - mask) - 1
             if max > self.v6max:
-                raise CoreException("%s is not cidr." % cidr)
+                raise ValueError("%s is not cidr." % cidr)
             tval = self.ipv6ton(ip)
         else:
-            raise CoreException("%s is not cidr." % cidr)
+            raise ValueError("%s is not cidr." % cidr)
 
         if (tval < min or tval > max):
             return False
@@ -125,7 +115,7 @@ class ip():
 
     def ipv4ton(self, addr):
         if not self.is_ipv4(addr): 
-            raise CoreException('{0} is not IPv4 Address.'.format(addr))
+            raise ValueError('{0} is not IPv4 Address.'.format(addr))
         numip = 0
         ipparts = addr.split('.')
         for i in range(1, 5):
@@ -142,9 +132,9 @@ class ip():
     
     def fullformedipv6(self, addr):
         if not type(addr) is str:
-            raise CoreException('{0} is not str type.'.format(addr))
+            raise ValueError('{0} is not str type.'.format(addr))
         if not self.is_ipv6(addr):
-            raise CoreException('{0} is not IPv6 Address.'.format(addr))
+            raise ValueError('{0} is not IPv6 Address.'.format(addr))
         parts = addr.split('::')
         if len(parts) == 2:
             prefix, suffix = '', ''
@@ -166,19 +156,19 @@ class ip():
 
     def ntoipv4(self, num):
         if not type(num) is int:
-            raise CoreException('%s is not int type.' % num)
+            raise ValueError('%s is not int type.' % num)
         return '.'.join([str(num >> (32 - 8*i) & 0xFF) for i in range(1,5)])
 
     def ntoipv6(self, num):
         if not type(num) in (int, long):
-            raise CoreException('%s is not int type.' % num)
+            raise ValueError('%s is not int type.' % num)
         return ':'.join(['{0:0>4}'.format(format(num >> (128 - 16*i) & 0xFFFF, 'x')) for i in range(1,9)])
    
     def getiprangebycidr(self, cidr, re_cidr=re.compile('.*/\d+$')):
         if not type(cidr) is str:
-            raise CoreException('{0} is not str type.'.format(cidr))
+            raise ValueError('{0} is not str type.'.format(cidr))
         if not re_cidr.match(cidr):
-            raise CoreException('{0} is not Cidr.'.format(cidr))
+            raise ValueError('{0} is not Cidr.'.format(cidr))
         cidr_splited = cidr.split('/')
         sip, mask= cidr_splited[0], int(cidr_splited[1])
         ips = None
@@ -187,7 +177,7 @@ class ip():
         elif self.is_ipv6(sip) and mask >= 0 and mask <= 128:
             ips = [self.ntoipv6(self.ipv6ton(sip)), self.ntoipv6(self.ipv6ton(sip) + 2 ** (128 - mask) - 1)]
         else:
-            raise CoreException('{0} is not Cidr.'.format(cidr))
+            raise ValueError('{0} is not Cidr.'.format(cidr))
         return ips
 
     def getcidrsbyiprange(self, sip, eip):
@@ -196,16 +186,16 @@ class ip():
             minIP = self.ipv4ton(sip)
             maxIP = self.ipv4ton(eip)
             if minIP > maxIP:
-                raise CoreException('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
+                raise ValueError('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
             cidrlist = self._tocidrv4(minIP, maxIP - minIP +1)
         elif self.is_ipv6(sip) and self.is_ipv6(eip):
             minIP = self.ipv6ton(sip)
             maxIP = self.ipv6ton(eip)
             if minIP > maxIP:
-                raise CoreException('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
+                raise ValueError('Minimum IP({0}) is larger than Maximum IP({1}).'.format(sip, eip))
             cidrlist = self._tocidrv6(minIP, maxIP - minIP +1)
         else: 
-            raise CoreException('{0} or {1} is not IPRange.'.format(sip, eip))
+            raise ValueError('{0} or {1} is not IPRange.'.format(sip, eip))
         return cidrlist
 
     def _tocidrv4(self, sip, num, cidrlist=None):
@@ -247,7 +237,7 @@ class rir(ip):
         if os.path.exists(dbpath):
             self.__c = sqlite3.connect(dbpath).cursor()
         else:
-            raise CoreException('{0} is not found.'.format(dbpath))
+            raise IOError('{0} is not found.'.format(dbpath))
         return
 
     def __merge(self, list):
@@ -263,7 +253,7 @@ class rir(ip):
         key, buf = None, None
         sqldict = {}
         if not os.path.exists(fpath):
-            raise CoreException('{0} is not found.'.format(fpath))
+            raise IOError('{0} is not found.'.format(fpath))
         with open(fpath) as fh:
             for line in fh:
                 ln = re.sub(r'\n|\r\n', ' ', line)
@@ -284,7 +274,7 @@ class rir(ip):
         if dbpath is None:
             dbpath = self.__default_dbname
         elif not type(dbpath) is str:
-            raise CoreException('%s is not str type.' % dbpath)
+            raise ValueError('%s is not str type.' % dbpath)
         dbpath_tmp = dbpath + '.new'
 
         with open(self.__rirlist) as fh:
@@ -371,9 +361,9 @@ class rir(ip):
             rir.__select_sql =  self.__sqlreader(self.__sqldir + '/select.sql')
         
         if self.__c is None:
-            raise CoreException('DB connection is not found.')
+            raise IOError('DB connection is not found.')
         elif not name in rir.__select_sql.keys():
-            raise CoreException('\'{0}\' identifier is not defined in the file({1}/select.sql).'.format(name, self.__sqldir))
+            raise IOError('\'{0}\' identifier is not defined in the file({1}/select.sql).'.format(name, self.__sqldir))
         
         self.__c.execute(rir.__select_sql[name].format(arg1, arg2))
         result = self.__c.fetchall()
@@ -422,7 +412,7 @@ class rir(ip):
         elif self.is_asn(arg):
             return self.__getdata('asn_to_all', arg)
         else:
-            raise CoreException('{0} is not both IPv4,6 Address and ASN.'.format(arg))
+            raise ValueError('{0} is not both IPv4,6 Address and ASN.'.format(arg))
     
     def ipv4tocc(self, addr):
         return self.__getdata('ipv4_to_cc', self.ipv4ton(addr))
@@ -437,7 +427,7 @@ class rir(ip):
     def __binsearch(self, val):
         res = None
         if not type(val) in (long, int):
-            raise CoreException('{0} is not integer.'.format(val))
+            raise ValueError('{0} is not integer.'.format(val))
         if self.__v6li is None:
             self.__v6li = self.__getdata('get_ipv6ranges')
         min = 0
@@ -455,17 +445,17 @@ class rir(ip):
 
     def asntocc(self, asn):
         if not self.is_asn(asn):
-            raise CoreException('{0} is not ASN.'.format(asn))
+            raise ValueError('{0} is not ASN.'.format(asn))
         return self.__getdata('asn_to_cc', asn)
 
     def cctoasns(self, cc):
         if not self.is_cc(cc):
-            raise CoreException('{0} is not country code.'.format(cc))
+            raise ValueError('{0} is not country code.'.format(cc))
         return self.__getdata('cc_to_asns', cc)
     
     def cctoipv4s(self, cc):
         if not self.is_cc(cc):
-            raise CoreException('{0} is not country code.'.format(cc))
+            raise ValueError('{0} is not country code.'.format(cc))
         cidrlist = []
         for e in self.__getdata('cc_to_ipv4s', cc):
             cidrlist.append(self._tocidrv4(e[0], e[1] - e[0] + 1))
@@ -473,7 +463,7 @@ class rir(ip):
 
     def cctoipv6s(self, cc):
         if not self.is_cc(cc):
-            raise CoreException('{0} is not country code.'.format(cc)) 
+            raise ValueError('{0} is not country code.'.format(cc)) 
         cidrlist = []
         for e in self.__getdata('cc_to_ipv6s', cc):
             cidrlist.append(self._tocidrv6(e[0], e[1] - e[0] + 1))
@@ -481,10 +471,10 @@ class rir(ip):
 
     def cctoname(self, cc):
         if not self.is_cc(cc):
-            raise CoreException('{0} is not country code.'.format(cc))
+            raise ValueError('{0} is not country code.'.format(cc))
         return self.__getdata('cc_to_name', cc)
 
     def nametocc(self, name):
         if not type(name) is str:
-            raise CoreException('%s is not str type' % name)
+            raise ValueError('%s is not str type' % name)
         return self.__getdata('name_to_cc', name)
