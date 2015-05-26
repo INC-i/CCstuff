@@ -2,11 +2,11 @@
 # -*- coding:utf-8 -*-
 
 import sys
-import ipstaff
+import ccstuff
 
 if __name__ == '__main__':
     argv = sys.argv
-    ir = ipstaff.rir()
+    ir = ccstuff.rir()
     if len(argv) == 1:
         ir.create_db()
     else:

@@ -3,9 +3,9 @@
 
 import sys
 import re
-import ipstaff
+import ccstuff
 
-ir = ipstaff.rir()
+ir = ccstuff.rir()
 jpflag = 0
 
 def stdin_replace():
