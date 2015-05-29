@@ -137,8 +137,10 @@ class IP
 
     public function ntoipv4($n)
     {
-        if (!is_int($n)) {
+        if (!preg_match('/^\d+$/', $n)) {
             trigger_error(sprintf("%s is not integer.", $n), E_USER_NOTICE);
+        }else if((int)$n < 0 || (int)$n > $V4MAX) {
+            trigger_error(sprintf("%s is over ipv4 range.", $n), E_USER_NOTICE);
         }
         $ary = array();
         for ($i=1;$i<5;$i++) {
@@ -152,8 +154,10 @@ class IP
         //引数はstr型、intやlongだと指数表示されてしまう場合があるため
         if (!is_string($n)) {
             trigger_error(sprintf("%s is not string type.", (string)$n), E_USER_NOTICE);
-        } elseif (!preg_match('/^\d+$/', $n)) {
+        }else if (!preg_match('/^\d+$/', $n)) {
             trigger_error(sprintf("%s is not integer.", (string)$n), E_USER_NOTICE);
+        }else if (gmp_cmp($n, 0) < 0 || gmp_cmp($n, $V6MAX) > 0) {
+            trigger_error(sprintf("%s is over ipv6 range.", $n), E_USER_NOTICE);
         }
         $ary = array();
         for ($i=1;$i<9;$i++) {
