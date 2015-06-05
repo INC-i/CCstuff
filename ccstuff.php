@@ -504,7 +504,8 @@ class RIR extends IP
         if (!$this->is_cc($cc)) {
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
-        return $this->_getdata('cc_to_name', $cc);
+        $ary = $this->_getdata('cc_to_name', $cc);
+        return $ary[0];
     }
 
     public function nametocc($name)
@@ -512,7 +513,8 @@ class RIR extends IP
         if (!preg_match('/[A-Za-z]*/', $name)) {
             trigger_error(sprintf("%s is not English name.", $name), E_USER_NOTICE);
         }
-        return $this->_getdata('name_to_cc', $name);
+        $ary = $this->_getdata('name_to_cc', $name);
+        return $ary[0];
     }
 
 }
