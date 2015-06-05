@@ -458,7 +458,8 @@ class rir(ip):
             raise ValueError('{0} is not country code.'.format(cc))
         cidrlist = []
         for e in self.__getdata('cc_to_ipv4s', cc):
-            cidrlist.append(self._tocidrv4(e[0], e[1] - e[0] + 1))
+            for cidr in self._tocidrv4(e[0], e[1] - e[0] + 1):
+                cidrlist.append(cidr)
         return cidrlist
 
     def cctoipv6s(self, cc):
@@ -466,7 +467,8 @@ class rir(ip):
             raise ValueError('{0} is not country code.'.format(cc)) 
         cidrlist = []
         for e in self.__getdata('cc_to_ipv6s', cc):
-            cidrlist.append(self._tocidrv6(e[0], e[1] - e[0] + 1))
+            for cidr in self._tocidrv6(e[0], e[1] - e[0] + 1):
+                cidrlist.append(cidr)
         return cidrlist
 
     def cctoname(self, cc):

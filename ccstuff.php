@@ -139,7 +139,7 @@ class IP
     {
         if (!preg_match('/^\d+$/', $n)) {
             trigger_error(sprintf("%s is not integer.", $n), E_USER_NOTICE);
-        }else if((int)$n < 0 || (int)$n > $V4MAX) {
+        }else if((int)$n < 0 || (int)$n > self::$V4MAX) {
             trigger_error(sprintf("%s is over ipv4 range.", $n), E_USER_NOTICE);
         }
         $ary = array();
@@ -156,7 +156,7 @@ class IP
             trigger_error(sprintf("%s is not string type.", (string)$n), E_USER_NOTICE);
         }else if (!preg_match('/^\d+$/', $n)) {
             trigger_error(sprintf("%s is not integer.", (string)$n), E_USER_NOTICE);
-        }else if (gmp_cmp($n, 0) < 0 || gmp_cmp($n, $V6MAX) > 0) {
+        }else if (gmp_cmp($n, 0) < 0 || gmp_cmp($n, self::$V6MAX) > 0) {
             trigger_error(sprintf("%s is over ipv6 range.", $n), E_USER_NOTICE);
         }
         $ary = array();
@@ -476,7 +476,10 @@ class RIR extends IP
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         foreach ($this->_getdata('cc_to_ipv4s', $cc) as $e) {
-            $cidrlist[count($cidrlist)] = $this->tocidrv4((int)$e[0], (int)($e[1] - $e[0] + 1));
+            $cidrs = $this->tocidrv4((int)$e[0], (int)($e[1] - $e[0] + 1));
+            foreach ($cidrs as $cidr) {
+                $cidrlist[count($cidrlist)] = $cidr;
+            }
         }
         return $cidrlist;
     }
@@ -488,7 +491,10 @@ class RIR extends IP
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         foreach ($this->_getdata('cc_to_ipv6s', $cc) as $e) {
-            $cidrlist[count($cidrlist)] = $this->tocidrv6($e[0], gmp_strval(gmp_add(gmp_sub($e[1], $e[0]), "1")));
+            $cidrs = $this->tocidrv6($e[0], gmp_strval(gmp_add(gmp_sub($e[1], $e[0]), "1")));
+            foreach($cidrs as $cidr) {
+                $cidrlist[count($cidrlist)] = $cidr;
+            }
         }
         return $cidrlist;
     }
