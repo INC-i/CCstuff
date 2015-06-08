@@ -318,6 +318,7 @@ class rir(ip):
                         else:
                             asnid += 1
                             id = asnid
+                            drow[4] = int(drow[3]) + int(drow[4]) - 1
                         drow.insert(0, id)
                         row_str = "'{0}'".format("','".join([str(clm) for clm in drow[:8]]))
                         c.execute(insert_sql.format('all_{0}'.format(type), row_str))
@@ -451,8 +452,14 @@ class rir(ip):
     def cctoasns(self, cc):
         if not self.is_cc(cc):
             raise ValueError('{0} is not country code.'.format(cc))
-        return self.__getdata('cc_to_asns', cc)
-    
+        asnlist = []
+        for e in self.__getdata('cc_to_asns', cc):
+            if e[0] == e[1]:
+                asnlist.append(e[0])
+            else:
+                asnlist.append(e)
+        return asnlist
+
     def cctoipv4s(self, cc):
         if not self.is_cc(cc):
             raise ValueError('{0} is not country code.'.format(cc))

@@ -470,7 +470,15 @@ class RIR extends IP
         if (!$this->is_cc($cc)) {
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
-        return $this->_getdata('cc_to_asns', $cc);
+        $asnlist = array();
+        foreach($this->_getdata('cc_to_asns', $cc) as $e){
+            if ($e[0] === $e[1]) {
+                array_push($asnlist, $e[0]);
+            }else{
+                array_push($asnlist, $e);
+            }
+        }
+        return $asnlist;
     }
 
     public function cctoipv4s($cc)
