@@ -271,7 +271,7 @@ class IP
             return $cidrlist;
         }
         $pw = (int)log($n, 2);
-        $cidrlist[count($cidrlist)] = sprintf('%s/%s', $this->ntoipv4($sip), 32-$pw);
+        array_push($cidrlist, sprintf('%s/%s', $this->ntoipv4($sip), 32-$pw));
         $sip += pow(2, $pw);
         return $this->tocidrv4($sip, $n-pow(2, $pw), $cidrlist);
     }
@@ -282,7 +282,7 @@ class IP
             return $cidrlist;
         }
         $pw = $this->_gmp_log_retr_int($n, 2);
-        $cidrlist[count($cidrlist)] = sprintf('%s/%s', $this->ntoipv6($sip), 128-$pw);
+        array_push($cidrlist, sprintf('%s/%s', $this->ntoipv6($sip), 128-$pw));
         $cnt = gmp_pow(2, $pw);
         $sip = gmp_strval(gmp_add($sip, $cnt));
         return $this->tocidrv6($sip, gmp_strval(gmp_sub($n, $cnt)), $cidrlist);
@@ -364,15 +364,15 @@ class RIR extends IP
 
         $rows = array();
         while ($res = $result->fetchArray(SQLITE3_NUM)) {
-            $rows[count($rows)] = $res;
+            array_push($rows, $res);
         }
 
         if ($rows == array()) {
             $result = False;
         }else {
-            $rcnt = count($rows);
-            $ccnt = count($rows[0]);
-            if ($rcnt == 1 && $ccnt == 1) {
+            $rows_cnt = count($rows, 0);
+            $cols_cnt = count($rows, 1)/count($rows, 0) - 1;
+            if ($rows_cnt == 1 && $cols_cnt == 1) {
                 $result = $rows[0][0];
             } else {
                 $result = $rows;
@@ -478,7 +478,7 @@ class RIR extends IP
         foreach ($this->_getdata('cc_to_ipv4s', $cc) as $e) {
             $cidrs = $this->tocidrv4((int)$e[0], (int)($e[1] - $e[0] + 1));
             foreach ($cidrs as $cidr) {
-                $cidrlist[count($cidrlist)] = $cidr;
+                array_push($cidrlist, $cidr);
             }
         }
         return $cidrlist;
@@ -493,7 +493,7 @@ class RIR extends IP
         foreach ($this->_getdata('cc_to_ipv6s', $cc) as $e) {
             $cidrs = $this->tocidrv6($e[0], gmp_strval(gmp_add(gmp_sub($e[1], $e[0]), "1")));
             foreach($cidrs as $cidr) {
-                $cidrlist[count($cidrlist)] = $cidr;
+                array_push($cidrlist, $cidr);
             }
         }
         return $cidrlist;
@@ -505,7 +505,7 @@ class RIR extends IP
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
         $ary = $this->_getdata('cc_to_name', $cc);
-        return $ary[0];
+        return $ary;
     }
 
     public function nametocc($name)
@@ -514,7 +514,7 @@ class RIR extends IP
             trigger_error(sprintf("%s is not English name.", $name), E_USER_NOTICE);
         }
         $ary = $this->_getdata('name_to_cc', $name);
-        return $ary[0];
+        return $ary;
     }
 
 }
