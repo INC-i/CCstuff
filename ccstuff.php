@@ -260,7 +260,7 @@ class IP
                 gmp_strval(gmp_add(gmp_sub(gmp_init($maxIP), gmp_init($minIP)), 1))
             );
         } else {
-            trigger_error(sprint("%s or %s is not IPRange.", $sip, $eip), E_USER_NOTICE);
+            trigger_error(sprintf("%s or %s is not IPRange.", $sip, $eip), E_USER_NOTICE);
         }
         return $cidrlist;
     }
