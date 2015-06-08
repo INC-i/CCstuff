@@ -372,9 +372,13 @@ class RIR extends IP
         }else {
             $rows_cnt = count($rows, 0);
             $cols_cnt = count($rows, 1)/count($rows, 0) - 1;
-            if ($rows_cnt == 1 && $cols_cnt == 1) {
+            if ($rows_cnt === 1 && $cols_cnt === 1) {
+            //[[0]]
                 $result = $rows[0][0];
-            } else {
+            }else if ($rows_cnt === 1 && $cols_cnt > 1) {
+            //[[0,1,2・・・]]
+                $result = $rows[0];
+            }else{
                 $result = $rows;
             }
         }
@@ -504,8 +508,7 @@ class RIR extends IP
         if (!$this->is_cc($cc)) {
             trigger_error(sprintf("%s is not country code.", $cc), E_USER_NOTICE);
         }
-        $ary = $this->_getdata('cc_to_name', $cc);
-        return $ary[0];
+        return $this->_getdata('cc_to_name', $cc);
     }
 
     public function nametocc($name)
@@ -513,8 +516,7 @@ class RIR extends IP
         if (!preg_match('/[A-Za-z]*/', $name)) {
             trigger_error(sprintf("%s is not English name.", $name), E_USER_NOTICE);
         }
-        $ary = $this->_getdata('name_to_cc', $name);
-        return $ary[0];
+        return $this->_getdata('name_to_cc', $name);
     }
 
 }
