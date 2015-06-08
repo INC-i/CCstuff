@@ -1,12 +1,12 @@
 'all_asn' :
 CREATE TABLE 'all_asn' ('ID' TEXT PRIMARY KEY,
-                        'RIR' TEXT,
+                        'RIR' CHAR,
                         'COUNTRY' CHAR COLLATE nocase,
-                        'TYPE' TEXT,
-                        'ASN' NUMERIC,
-                        'NUM' NUMERIC,
-                        'DATE' TEXT,
-                        'STATUS' TEXT)
+                        'TYPE' CHAR,
+                        'ASN_MINIMUM' INTEGER,
+                        'ASN_MAXIMUM' INTEGER,
+                        'DATE' CHAR,
+                        'STATUS' CHAR)
 'all_ipv4_mini' :
 CREATE TABLE 'all_ipv4_mini' ('ADDR_MINIMUM' INTEGER,
                               'ADDR_MAXIMUM' INTEGER,

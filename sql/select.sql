@@ -25,13 +25,15 @@ FROM all_ipv6_mini
 
 SELECT COUNTRY 
 FROM all_asn
-WHERE ASN = '{0}'
+WHERE ASN_MINIMUM <= '{0}'
+AND ASN_MAXIMUM >= '{0}'
 
 'asn_exist':
 
-SELECT COUNT(ASN)
+SELECT COUNT(ID)
 FROM all_asn
-Where ASN = '{0}'
+Where ASN_MINIMUM <= '{0}'
+AND ASN_MAXIMUM >= '{0}'
 
 'cc_exist':
 
@@ -41,7 +43,7 @@ WHERE CC2 = '{0}'
 
 'cc_to_asns':
 
-SELECT ASN
+SELECT ASN_MINIMUM, ASN_MAXIMUM
 FROM all_asn
 WHERE COUNTRY = '{0}'
 
@@ -75,4 +77,5 @@ AND ADDR_MAXIMUM = '{1}'
 
 SELECT COUNTRY, RIR, STATUS, DATE 
 FROM all_asn
-WHERE ASN = '{0}'
+WHERE ASN_MINIMUM <= '{0}'
+AND ASN_MAXIMUM >= '{0}'
