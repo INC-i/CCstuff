@@ -387,7 +387,7 @@ class RIR extends IP
 
     public function is_asn($num)
     {
-       if (is_int($num) && $this->_getdata('asn_exist', $num) > 0) {
+       if (preg_match('/^\d+$/', $num) && $this->_getdata('asn_exist', $num) > 0) {
             return True;
        } else {
             return False;
