@@ -457,7 +457,8 @@ class rir(ip):
             if e[0] == e[1]:
                 asnlist.append(e[0])
             else:
-                asnlist.append(e)
+                for i in range(e[0], e[1] + 1):
+                    asnlist.append(i)
         return asnlist
 
     def cctoipv4s(self, cc):

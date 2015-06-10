@@ -475,7 +475,9 @@ class RIR extends IP
             if ($e[0] === $e[1]) {
                 array_push($asnlist, $e[0]);
             }else{
-                array_push($asnlist, $e);
+                for ($i=$e[0];$i<=$e[1];$i++) {
+                    array_push($asnlist, $i);
+                }
             }
         }
         return $asnlist;
