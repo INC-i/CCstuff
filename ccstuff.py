@@ -282,14 +282,20 @@ class rir(ip):
                 ary = line.replace("'", '').rstrip().split(',')
                 urllist[ary[0]] = ary[1]
 
-        create_sql = self.__sqlreader(self.__sqldir + '/create.sql')
+        create_table_sql = self.__sqlreader(self.__sqldir + '/create_table.sql')
+        create_index_sql = self.__sqlreader(self.__sqldir + '/create_index.sql')
         insert_sql = 'INSERT INTO {0} VALUES ({1})'
         
         if os.path.exists(dbpath_tmp):
             os.remove(dbpath_tmp)
         conn = sqlite3.connect(dbpath_tmp)
         c = conn.cursor()
-        for sql in create_sql.values():
+        
+        for sql in create_table_sql.values():
+            c.execute(sql)
+            conn.commit()
+
+        for sql in create_index_sql.values():
             c.execute(sql)
             conn.commit()
         
