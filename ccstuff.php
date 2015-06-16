@@ -368,7 +368,7 @@ class RIR extends IP
         }
 
         if ($rows == array()) {
-            $result = False;
+            $result = null;
         }else {
             $rows_cnt = count($rows, 0);
             $cols_cnt = count($rows, 1)/count($rows, 0) - 1;
