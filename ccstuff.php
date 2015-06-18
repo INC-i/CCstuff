@@ -13,6 +13,7 @@ class IP
         $SEG4 = "(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";
         $SEG6 = "[0-9a-fA-F]{1,4}";
         self::$REGEX['ipv4'] = "/^(($SEG4\.){3}$SEG4)$/";
+        self::$REGEX['ipv4cidr'] = "/^(($SEG4\.){3}$SEG4)\/(\d|[1-2]\d|3[0-2])$/";
         self::$REGEX['ipv6'] = "/^(" .
                               "($SEG6:){7}$SEG6|" .
                               "($SEG6:){1,7}:|" .
@@ -27,6 +28,20 @@ class IP
                               "::(ffff(:0{1,4}){0,1}:){0,1}$SEG4|" .
                               "($SEG6:){1,4}:$SEG4" .
                               ")$/";
+        self::$REGEX['ipv6cidr'] = "/^(" .
+                              "($SEG6:){7}$SEG6|" .
+                              "($SEG6:){1,7}:|" .
+                              "($SEG6:){1,6}:$SEG6|" .
+                              "($SEG6:){1,5}(:$SEG6){1,2}|" .
+                              "($SEG6:){1,4}(:$SEG6){1,3}|" .
+                              "($SEG6:){1,3}(:$SEG6){1,4}|" .
+                              "($SEG6:){1,2}(:$SEG6){1,5}|" .
+                              "$SEG6:((:$SEG6){1,6})|" .
+                              ":((:$SEG6){1,7}|:)|" .
+                              "fe80:(:$SEG6){0,4}%[0-9a-zA-Z]{1,}|" .
+                              "::(ffff(:0{1,4}){0,1}:){0,1}$SEG4|" .
+                              "($SEG6:){1,4}:$SEG4" .
+                              ")\/(\d|[1-9]\d|1[0-1]\d|12[0-8])$/";
                               
     }
 
@@ -48,34 +63,26 @@ class IP
         }
     }
 
-    public function is_cidr($cidr)
+    public function is_cidr($ipcidr)
     {
-        if (strpos($cidr, "/") === false) {
+        if (!(preg_match(self::$REGEX['ipv4cidr'], $ipcidr) ||
+            preg_match(self::$REGEX['ipv6cidr'], $ipcidr))) {
             return False;
         }
 
-        list($ip, $mask) = explode("/", $cidr);
-        if ($this->is_ipv4($ip) && preg_match("/^\d+$/", $mask)) {
-            $min = $this->ipv4ton($ip);
-            if ($mask < 0 || $mask > 32) {
-                return False;
-            }
-            $max = $min + pow(2, 32-$mask) -1;
+        list($ip, $mask) = explode("/", $ipcidr);
+        if ($this->is_ipv4($ip)) {
+            $max = $this->ipv4ton($ip) + pow(2, 32-$mask) -1;
             if ($max > self::$V4MAX) {
                 return False;
             }
-            return True;
-        } else if ($this->is_ipv6($ip) && preg_match("/^\d+$/", $mask)) {
-            $min = gmp_init($this->ipv6ton($ip));
-            if ($mask < 0 || $mask > 128) {
-                return False;
-            }
-            $max = gmp_sub(gmp_add($min, gmp_pow(2, 128-$mask)), 1);
+        } else if ($this->is_ipv6($ip)) {
+            $max = gmp_sub(gmp_add(gmp_init($this->ipv6ton($ip)), gmp_pow(2, 128-$mask)), 1);
             if (gmp_cmp($max, self::$V6MAX) > 0) {
                 return False;
             }
-            return True;
         }
+        return True;
     }
     
     public function ipv4ton($addr)
@@ -168,56 +175,30 @@ class IP
     }
 
 
-    public function contain($cidr, $ip)
+    public function contain($ipcidr, $ip)
     {
-        if (strpos($cidr, "/") === false) {
-            trigger_error("$cidr is not IP/CIDR.", E_USER_NOTICE);
+        if (!$this->is_cidr($ipcidr)) {
+            trigger_error("$ipcidr is not IP/CIDR.", E_USER_NOTICE);
         }
-        
-        list($sip, $mask) = explode("/", $cidr);
-        if ($this->is_ipv4($sip) && preg_match("/^\d+$/", $mask)) {
+        list($sip, $cidr) = explode("/", $ipcidr);
+        if ($this->is_ipv4($sip)) {
             if (!$this->is_ipv4($ip)) {
                 trigger_error("$ip is not ipv4 address.", E_USER_NOTICE);
             }
-            $min = $this->ipv4ton($sip);
-            if (0 <= $mask && $mask <= 32) {
-                $max = $min + pow(2, 32 - $mask) - 1;
-            } else {
-                trigger_error("/$mask is not cidr.", E_USER_NOTICE);
+            $mask = pow(2, 32) - pow(2, 32 - $cidr);
+            if($this->ipv4ton($sip) & $mask !== $this->ipv4ton($ip) & $mask){
+                return false;
             }
-            if ($max <= self::$V4MAX) {
-                $tval = $this->ipv4ton($ip);
-                if ($min <= $tval && $tval <= $max) {
-                    return True;
-                } else {
-                    return False;
-                }
-            } else {
-                trigger_error("$cidr is invalid ip range.", E_USER_NOTICE);
-            }
-        } else if ($this->is_ipv6($sip) && preg_match("/^\d+$/", $mask)) {
+        }else if ($this->is_ipv6($sip)) {
             if (!$this->is_ipv6($ip)) {
                 trigger_error("$ip is not ipv6 address.", E_USER_NOTICE);
             }
-            $min = $this->ipv6ton($sip);
-            if (0 <= $mask && $mask <= 128) {
-                $max = gmp_sub(gmp_add($min, gmp_pow(2, 128 - $mask)), 1);
-            } else {
-                trigger_error("/$mask is not cidr.", E_USER_NOTICE);
+            $mask = gmp_sub(gmp_pow(2, 128), gmp_pow(2, 128 - $cidr));
+            if(gmp_cmp(gmp_and($this->ipv6ton($sip), $mask), gmp_and($this->ipv6ton($ip), $mask)) !== 0){
+                return false;
             }
-            if (gmp_cmp($max, self::$V6MAX) <= 0 ) {
-                $tval = $this->ipv6ton($ip);
-                if (gmp_cmp($min, $tval) <= 0 && gmp_cmp($tval, $max) <= 0) {
-                    return True;
-                } else {
-                    return False;
-                }
-            } else {
-                trigger_error("$cidr is invalid ip range.", E_USER_NOTICE);
-            }
-        } else {
-            trigger_error("$sip/$mask is not IP/CIDR.", E_USER_NOTICE);
         }
+        return true;
     }
 
     public function getiprangebycidr($cidr)
@@ -226,17 +207,13 @@ class IP
             trigger_error(sprintf("%s is not cidr.", $cidr), E_USER_NOTICE);
         }
         list($sip, $mask) = explode('/', $cidr);
-        $ips = array();
         if ($this->is_ipv4($sip)) {
             $min = $this->ipv4ton($sip);
-            $ips[0] = $this->ntoipv4($min);
-            $ips[1] = $this->ntoipv4($min + pow(2, 32-$mask)-1);
+            return array($this->ntoipv4($min), $this->ntoipv4($min + pow(2, 32-$mask)-1));
         } elseif ($this->is_ipv6($sip)) {
             $min = $this->ipv6ton($sip);
-            $ips[0] = $this->ntoipv6($min);
-            $ips[1] = $this->ntoipv6(gmp_strval(gmp_sub(gmp_add($min, gmp_pow(2, 128-$mask)), 1)));
+            return array($this->ntoipv6($min), $this->ntoipv6(gmp_strval(gmp_sub(gmp_add($min, gmp_pow(2, 128-$mask)), 1))));
         }
-        return $ips;
     }
 
     public function getcidrsbyiprange($sip, $eip)

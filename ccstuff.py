@@ -17,6 +17,7 @@ class ip():
         ipv4seg = '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
         ipv6seg = '[0-9a-fA-F]{1,4}'
         ip.regex['ipv4'] = re.compile(r'^((SEG4\.){3}SEG4)$'.replace('SEG4', ipv4seg))
+        ip.regex['ipv4cidr'] = re.compile(r'^((SEG4\.){3}SEG4)/(\d|[1-2]\d|3[0-2])$'.replace('SEG4', ipv4seg))
         ip.regex['ipv6'] = re.compile(r'^(' \
                                        '(SEG6:){7}SEG6|' \
                                        '(SEG6:){1,7}:|' \
@@ -31,6 +32,21 @@ class ip():
                                        '::(ffff(:0{1,4}){0,1}:){0,1}SEG4|' \
                                        '(SEG6:){1,4}:SEG4' \
                                        ')$'.replace('SEG6', ipv6seg).replace('SEG4', ipv4seg))
+        
+        ip.regex['ipv6cidr'] = re.compile(r'^(' \
+                                           '(SEG6:){7}SEG6|' \
+                                           '(SEG6:){1,7}:|' \
+                                           '(SEG6:){1,6}:SEG6|' \
+                                           '(SEG6:){1,5}(:SEG6){1,2}|' \
+                                           '(SEG6:){1,4}(:SEG6){1,3}|' \
+                                           '(SEG6:){1,3}(:SEG6){1,4}|' \
+                                           '(SEG6:){1,2}(:SEG6){1,5}|' \
+                                           'SEG6:((:SEG6){1,6})|' \
+                                           ':((:SEG6){1,7}|:)|' \
+                                           'fe80:(:SEG6){0,4}%[0-9a-zA-Z]{1,}|' \
+                                           '::(ffff(:0{1,4}){0,1}:){0,1}SEG4|' \
+                                           '(SEG6:){1,4}:SEG4' \
+                                           ')/(\d|[1-9]\d|1[0-1]\d|12[0-8])$'.replace('SEG6', ipv6seg).replace('SEG4', ipv4seg))
 
     def is_int(self, num):
         if self.re_int.match(num):
@@ -39,79 +55,61 @@ class ip():
             return False
 
     def is_ipv4(self, addr):
-        if type(addr) is str and ip.regex['ipv4'].match(addr):
+        if type(addr) is str and self.regex['ipv4'].match(addr):
             return True
         else:
             return False
 
     def is_ipv6(self, addr):
-        if type(addr) is str and ip.regex['ipv6'].match(addr):
+        if type(addr) is str and self.regex['ipv6'].match(addr):
             return True
         else:
             return False
 
-    def is_cidr(self, cidr):
-        if not "/" in cidr:
+    def is_cidr(self, ip_cidr):
+        if not (self.regex['ipv4cidr'].match(ip_cidr) or self.regex['ipv6cidr'].match(ip_cidr)):
             return False
 
-        ip, mask = cidr.split("/")
-        if not self.is_int(mask):
-           raise False
+        sip, cidr = ip_cidr.split("/")
+        cidr = int(cidr)
 
-        mask = int(mask)
-        if self.is_ipv4(ip) and mask >= 0 and mask <= 32:
-            min = self.ipv4ton(ip)
-            max = min + 2 ** (32 - mask) - 1
+        if self.is_ipv4(sip):
+            max = self.ipv4ton(sip) + 2 ** (32 - cidr) - 1
             if max > self.v4max:
                 return False
-        elif self.is_ipv6(ip) and mask >= 0 and mask <= 128:
-            min = self.ipv6ton(ip)
-            max = min + 2 ** (128 - mask) - 1
+        elif self.is_ipv6(ip):
+            max = self.ipv6ton(sip) + 2 ** (128 - cidr) - 1
             if max > self.v6max:
                 return False
-        else:
-            return False
 
         return True
             
 
-    def contain(self, cidr, ip):
-        if not "/" in cidr:
-            raise ValueError("%s is not cidr." % cidr)
+    def contain(self, ip_cidr, ip):
+        if not self.is_cidr(ip_cidr):
+            raise ValueError("%s is not ip/cidr." % ip_cidr)
+        elif not (self.is_ipv4(ip) or self.is_ipv6(ip)):
+            raise ValueError("%s is not ip address." % ip)
 
-        sip, mask = cidr.split("/")
+        sip, cidr = ip_cidr.split("/")
+        cidr = int(cidr)
+        mask = 32
         
-        if not self.is_int(mask):
-           raise ValueError("%s is not cidr." % cidr)
-
-        mask = int(mask)
-        min, max, tval = 0, 0, 0
-
-        if self.is_ipv4(sip) and mask >= 0 and mask <= 32:
-            if not self.is_ipv4(ip):
-                raise ValueError("%s is not ipv4 address." % ip)
-            min = self.ipv4ton(sip)
-            max = min + 2 ** (32 - mask) - 1
-            if max > self.v4max:
-                raise ValueError("%s is not cidr." % cidr)
-            tval = self.ipv4ton(ip)
-        elif self.is_ipv6(sip) and mask >= 0 and mask <= 128:
-            if not self.is_ipv6(ip):
-                raise ValueError("%s is not ipv6 address." % ip)
-            min = self.ipv6ton(sip)
-            max = min + 2 ** (128 - mask) - 1
-            if max > self.v6max:
-                raise ValueError("%s is not cidr." % cidr)
-            tval = self.ipv6ton(ip)
+        if self.is_ipv4(sip) and self.is_ipv4(ip):
+           sip = self.ipv4ton(sip)
+           mask = 2 ** 32 - 2 ** (32 - cidr)
+           ip = self.ipv4ton(ip)
+        elif self.is_ipv6(sip) and self.is_ipv6(ip):
+           sip = self.ipv6ton(sip)
+           mask = 2 ** 128 - 2 ** (128 - cidr)
+           ip = self.ipv6ton(ip)
         else:
-            raise ValueError("%s is not cidr." % cidr)
+            raise ValueError("IP version is not match.")
 
-        if (tval < min or tval > max):
+        if sip & mask != ip & mask:
             return False
-
+            
         return True
-        
-
 
     def ipv4ton(self, addr):
         if not self.is_ipv4(addr): 
@@ -164,21 +162,14 @@ class ip():
             raise ValueError('%s is not int type.' % num)
         return ':'.join(['{0:0>4}'.format(format(num >> (128 - 16*i) & 0xFFFF, 'x')) for i in range(1,9)])
    
-    def getiprangebycidr(self, cidr, re_cidr=re.compile('.*/\d+$')):
-        if not type(cidr) is str:
-            raise ValueError('{0} is not str type.'.format(cidr))
-        if not re_cidr.match(cidr):
-            raise ValueError('{0} is not Cidr.'.format(cidr))
-        cidr_splited = cidr.split('/')
-        sip, mask= cidr_splited[0], int(cidr_splited[1])
-        ips = None
-        if self.is_ipv4(sip) and mask >= 0 and mask <= 32:
-            ips = [self.ntoipv4(self.ipv4ton(sip)), self.ntoipv4(self.ipv4ton(sip) + 2 ** (32 - mask) - 1)]
-        elif self.is_ipv6(sip) and mask >= 0 and mask <= 128:
-            ips = [self.ntoipv6(self.ipv6ton(sip)), self.ntoipv6(self.ipv6ton(sip) + 2 ** (128 - mask) - 1)]
-        else:
-            raise ValueError('{0} is not Cidr.'.format(cidr))
-        return ips
+    def getiprangebycidr(self, ip_cidr):
+        if not self.is_cidr(ip_cidr):
+            raise ValueError('{0} is not ip/cidr.'.format(ip_cidr))
+        sip, mask= ip_cidr.split('/')
+        if self.is_ipv4(sip):
+            return [self.ntoipv4(self.ipv4ton(sip)), self.ntoipv4(self.ipv4ton(sip) + 2 ** (32 - int(mask)) - 1)]
+        elif self.is_ipv6(sip):
+            return [self.ntoipv6(self.ipv6ton(sip)), self.ntoipv6(self.ipv6ton(sip) + 2 ** (128 - int(mask)) - 1)]
 
     def getcidrsbyiprange(self, sip, eip):
         cidrlist = None
