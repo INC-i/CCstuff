@@ -186,7 +186,7 @@ class IP
                 trigger_error("$ip is not ipv4 address.", E_USER_NOTICE);
             }
             $mask = pow(2, 32) - pow(2, 32 - $cidr);
-            if($this->ipv4ton($sip) & $mask !== $this->ipv4ton($ip) & $mask){
+            if(($this->ipv4ton($sip) & $mask) !== ($this->ipv4ton($ip) & $mask)){
                 return false;
             }
         }else if ($this->is_ipv6($sip)) {
