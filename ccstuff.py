@@ -273,8 +273,6 @@ class rir(ip):
                 ary = line.replace("'", '').rstrip().split(',')
                 urllist[ary[0]] = ary[1]
 
-        create_table_sql = self.__sqlreader(self.__sqldir + '/create_table.sql')
-        create_index_sql = self.__sqlreader(self.__sqldir + '/create_index.sql')
         insert_sql = 'INSERT INTO {0} VALUES ({1})'
         
         if os.path.exists(dbpath_tmp):
@@ -282,13 +280,12 @@ class rir(ip):
         conn = sqlite3.connect(dbpath_tmp)
         c = conn.cursor()
         
-        for sql in create_table_sql.values():
+        for sql in self.__sqlreader(self.__sqldir + '/create_table.sql').values():
             c.execute(sql)
-            conn.commit()
-
-        for sql in create_index_sql.values():
+        conn.commit()
+        for sql in self.__sqlreader(self.__sqldir + '/create_index.sql').values():
             c.execute(sql)
-            conn.commit()
+        conn.commit()
         
         v4id, v6id, asnid = 0, 0, 0
         print 'Start...\n'
@@ -298,45 +295,41 @@ class rir(ip):
             print 'Done, making table...'.format(rir)
             for drow in drows:
                 id = None
-                if len(drow) in (7, 8):
+                # https://www.arin.net/knowledge/statistics/nro_extended_stats_format.pdf
+                if len(drow) > 6:
                     type = drow[2]
-                    if type in ('asn', 'ipv4', 'ipv6') and len(drow) in (7, 8):
-                        if type == 'ipv4':
-                            v4id += 1
-                            id = v4id
-                            drow[3] = self.ipv4ton(drow[3])
-                            # https://www.arin.net/knowledge/statistics/nro_extended_stats_format.pdf
-                            drow[4] = drow[3] + int(drow[4]) - 1
-                        elif type == 'ipv6':
-                            v6id += 1
-                            id = v6id
-                            drow[3] = self.ipv6ton(drow[3])
-                            drow[4] = drow[3] + 2**(128-int(drow[4])) - 1
-                        else:
-                            asnid += 1
-                            id = asnid
-                            drow[4] = int(drow[3]) + int(drow[4]) - 1
+                    if type == 'ipv4':
+                        v4id += 1
+                        id = v4id
+                        drow[3] = self.ipv4ton(drow[3])
+                        drow[4] = drow[3] + int(drow[4]) - 1
+                    elif type == 'ipv6':
+                        v6id += 1
+                        id = v6id
+                        drow[3] = self.ipv6ton(drow[3])
+                        drow[4] = drow[3] + 2**(128-int(drow[4])) - 1
+                    elif type == 'asn':
+                        asnid += 1
+                        id = asnid
+                        drow[3] = int(drow[3])
+                        drow[4] = int(drow[3]) + int(drow[4]) - 1
+                    if type in ('ipv4', 'ipv6', 'asn'):
                         drow.insert(0, id)
                         row_str = "'{0}'".format("','".join([str(clm) for clm in drow[:8]]))
                         c.execute(insert_sql.format('all_{0}'.format(type), row_str))
             conn.commit()
-            del drows
             print 'Done.\n'
         # exclude available, reserved
         select_sql = "SELECT ADDR_MINIMUM, ADDR_MAXIMUM, COUNTRY FROM {0} WHERE STATUS IN ('allocated', 'assigned')"
         
         c.execute(select_sql.format('all_ipv4'))
-        drows = self.__merge(sorted(c.fetchall(), key=lambda x: x[0]))
-        for drow in drows:
-            row_str = "'{0}'".format("','".join([str(clm) for clm in drow]))
-            c.execute(insert_sql.format('all_ipv4_mini', row_str))
+        for drow in self.__merge(sorted(c.fetchall(), key=lambda x: x[0])):
+            c.execute(insert_sql.format('all_ipv4_mini', "'{0}'".format("','".join([str(clm) for clm in drow]))))
         conn.commit()
 
         c.execute(select_sql.format('all_ipv6'))
-        drows = self.__merge(sorted([[int(r[0]), int(r[1]), r[2]] for r in c.fetchall()], key=lambda x: x[0]))
-        for drow in drows:
-            row_str = "'{0}'".format("','".join([str(clm) for clm in drow]))
-            c.execute(insert_sql.format('all_ipv6_mini', row_str))
+        for drow in self.__merge(sorted([[int(r[0]), int(r[1]), r[2]] for r in c.fetchall()], key=lambda x: x[0])):
+            c.execute(insert_sql.format('all_ipv6_mini', "'{0}'".format("','".join([str(clm) for clm in drow]))))
         conn.commit()
         
         with open('iso3166-1') as fh:
